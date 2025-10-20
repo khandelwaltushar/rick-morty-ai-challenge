@@ -7,6 +7,7 @@ from data_client import get_locations, get_characters_index
 from db import init_db, add_note, list_notes_by_character, list_all_notes
 from gen import summarize_location, generate_dialogue
 from eval import evaluate_generation
+from embeddings import cosine_rank
 
 
 st.set_page_config(page_title="Rick & Morty AI", layout="wide")
@@ -99,10 +100,7 @@ def main():
                 st.warning("Pick two valid characters.")
 
     with tab3:
-        st.write("Semantic search across notes and resident names (TF-IDF cosine).")
-        from sklearn.feature_extraction.text import TfidfVectorizer
-        from sklearn.metrics.pairwise import cosine_similarity
-
+        st.write("AI-augmented semantic search across notes and residents (embeddings + cosine).")
         q = st.text_input("Search query")
         if q:
             corpus_rows = list_all_notes()
@@ -112,15 +110,13 @@ def main():
                     "id": int(ch.get("id")),
                     "character_id": ch.get("id"),
                     "character_name": ch.get("name"),
-                    "content": f"[resident] {ch.get('name')} {ch.get('species')} {ch.get('status')}",
+                    "content": f"[resident] {ch.get('name')} {ch.get('species')} {ch.get('status')} {selected_loc.get('name')} {selected_loc.get('type')}",
                     "created_at": "",
                 })
             corpus_texts = [r["content"] for r in corpus_rows]
-            vec = TfidfVectorizer(min_df=1, max_features=5000)
-            X = vec.fit_transform([q] + corpus_texts)
-            sims = cosine_similarity(X[0:1], X[1:]).ravel()
-            ranked = sorted(zip(corpus_rows, sims), key=lambda x: x[1], reverse=True)[:10]
-            for row, sim in ranked:
+            ranked = cosine_rank(q, corpus_texts, top_k=10)
+            for idx, sim in ranked:
+                row = corpus_rows[idx]
                 st.write(f"{row['character_name']}: {row['content']}")
                 st.caption(f"score={sim:.3f}")
 
