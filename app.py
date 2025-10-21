@@ -47,7 +47,7 @@ def render_notes_section(character_id: str, character_name: str):
     note = st.text_area("Add a note", key=f"note_{character_id}")
     if st.button("Save note", key=f"save_{character_id}") and note.strip():
         add_note(character_id, character_name, note.strip())
-        st.experimental_rerun()
+        st.rerun()
 
 
 def main():
